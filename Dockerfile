@@ -41,6 +41,13 @@ COPY scripts/install_channel_dependencies.py scripts/
 COPY --from=webui-builder /app/nanobot/web/dist/ nanobot/web/dist/
 RUN NANOBOT_SKIP_WEBUI_BUILD=1 uv pip install --python "$VIRTUAL_ENV/bin/python" --no-cache .
 
+# Token counting must stay local at runtime because production pods have no
+# direct Internet access. Prime tiktoken's vocabulary while the image is built.
+ENV TIKTOKEN_CACHE_DIR=/app/tiktoken-cache
+RUN mkdir -p "$TIKTOKEN_CACHE_DIR" && \
+    python -c 'import tiktoken; tiktoken.get_encoding("cl100k_base")' && \
+    chmod -R a+rX "$TIKTOKEN_CACHE_DIR"
+
 # Preinstall selected channel dependencies from their manifests. A comma-separated
 # list keeps the image configurable while preserving WhatsApp in the default image.
 ARG NANOBOT_CHANNELS=whatsapp
