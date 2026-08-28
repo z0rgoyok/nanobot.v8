@@ -1,0 +1,44 @@
+name: Container image
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/container.yml"
+      - "Dockerfile"
+      - "entrypoint.sh"
+      - "nanobot/**"
+      - "scripts/install_channel_dependencies.py"
+      - "webui/**"
+      - "pyproject.toml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          build-args: NANOBOT_CHANNELS=telegram
+          tags: |
+            ghcr.io/z0rgoyok/nanobot.v8:${{ github.sha }}
+            ghcr.io/z0rgoyok/nanobot.v8:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
